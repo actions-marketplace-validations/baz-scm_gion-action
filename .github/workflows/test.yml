@@ -94,4 +94,5 @@ jobs:
       - name: changed (this event's defaults)
         id: event
         uses: ./changed
-      - run: echo "${{ steps.event.outputs.base }}..${{ steps.event.outputs.head }}: ${{ steps.event.outputs.count }} files"
+      - run: |
+          echo "${{ steps.event.outputs.base }}..${{ steps.event.outputs.head }}: ${{ steps.event.outputs.count }} files"
