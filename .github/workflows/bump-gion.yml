@@ -1,19 +1,16 @@
 name: bump gion
 
-# Makes a new gion release the default `version` of every action, tests it,
-# tags the next v1.x.y and moves v1 to it. gion's release workflow dispatches
-# this once GoReleaser has published the binaries:
+# Makes a gion release the default `version` of every action, tests it,
+# tags the next v1.x.y and moves v1 to it. Run it after each gion release
+# (see CONTRIBUTING.md):
 #
-#   gh api repos/baz-scm/gion-action/dispatches \
-#     -f event_type=gion-release -f 'client_payload[version]=vX.Y.Z'
+#   gh workflow run bump-gion.yml -R baz-scm/gion-action
 on:
-  repository_dispatch:
-    types: [gion-release]
   workflow_dispatch:
     inputs:
       version:
-        description: gion release to make the default, e.g. v0.3.2.
-        required: true
+        description: gion release to make the default, e.g. v0.3.2. Empty for the latest release.
+        required: false
 
 permissions:
   contents: write
@@ -22,24 +19,33 @@ concurrency:
   group: bump-gion
   cancel-in-progress: false
 
-env:
-  VERSION: ${{ github.event.client_payload.version || inputs.version }}
-
 jobs:
   bump:
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.edit.outputs.changed }}
       sha: ${{ steps.commit.outputs.sha }}
+      version: ${{ steps.version.outputs.version }}
     env:
       GITHUB_TOKEN: ${{ github.token }}
     steps:
-      - name: Check the version
+      - name: Pick the version
+        id: version
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
+          if [[ -z $VERSION ]]; then
+            # The latest-release page redirects to .../tag/<version>. It never
+            # points at a pre-release or a tag whose release didn't publish.
+            url=$(curl -fsSLI --retry 3 -o /dev/null -w '%{url_effective}' https://github.com/baz-scm/gion/releases/latest)
+            VERSION=${url##*/}
+          fi
           if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::'$VERSION' is not a release version (vX.Y.Z)"
             exit 1
           fi
+          echo "VERSION=$VERSION" >>"$GITHUB_ENV"
+          echo "version=$VERSION" >>"$GITHUB_OUTPUT"
       - name: Check out main with gion
         env:
           GION_INSTALL_DIR: ${{ runner.temp }}/bootstrap
@@ -92,6 +98,7 @@ jobs:
       GITHUB_TOKEN: ${{ github.token }}
       GH_TOKEN: ${{ github.token }}
       SHA: ${{ needs.bump.outputs.sha }}
+      VERSION: ${{ needs.bump.outputs.version }}
     steps:
       - name: Install gion
         env:

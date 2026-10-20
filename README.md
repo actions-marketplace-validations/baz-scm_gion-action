@@ -124,4 +124,4 @@ You don't need `actions/cache`. gion fetches only the objects a command needs, s
 
 Each release of this action defaults to one gion release, the one its tests ran against. Installing a known version skips the "which release is latest" lookup, so it's faster than `version: latest`.
 
-When gion publishes a release, [bump-gion](.github/workflows/bump-gion.yml) makes it the default, runs the tests, tags the next `v1.x.y` and moves `v1` to it. So `@v1` follows new gion releases within minutes. Use `@v1.x.y` or a commit to stay on one gion, or set `version` yourself.
+After each gion release a maintainer runs [bump-gion](.github/workflows/bump-gion.yml), which makes it the default, runs the tests, tags the next `v1.x.y` and moves `v1` to it. So `@v1` follows new gion releases. Use `@v1.x.y` or a commit to stay on one gion, or set `version` yourself.
