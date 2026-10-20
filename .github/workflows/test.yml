@@ -1,0 +1,97 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # The actions under test live in this repo, so fetch it first with the
+      # plain installer (dogfooding: no actions/checkout).
+      - name: Check out this repo with gion
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GION_INSTALL_DIR: ${{ runner.temp }}/bootstrap
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/baz-scm/gion/main/install.sh | sh
+          "$GION_INSTALL_DIR/gion" clone "$GITHUB_REPOSITORY" . --ref "$GITHUB_SHA"
+
+      - name: setup (pinned)
+        id: pinned
+        uses: ./
+        with:
+          version: v0.2.0
+      - run: test "${{ steps.pinned.outputs.version }}" = v0.2.0 && gion version | grep -q 'v0.2.0'
+
+      - name: setup (latest)
+        id: latest
+        uses: ./
+      - name: latest is on PATH and the token is exported
+        run: |
+          gion version | grep -q "${{ steps.latest.outputs.version }}"
+          test -n "$GITHUB_TOKEN"
+
+      - name: checkout (sparse, other repo)
+        id: other
+        uses: ./checkout
+        with:
+          repository: baz-scm/gion
+          ref: v0.3.1
+          paths: |
+            internal/auth
+            go.mod
+          path: ws
+      - name: only the asked-for paths and their parents' files
+        run: |
+          test "${{ steps.other.outputs.path }}" = ws
+          test -f ws/internal/auth/auth.go
+          test -f ws/go.mod
+          test -f ws/README.md
+          test ! -e ws/internal/cli
+          git -C ws status --short
+
+      - name: checkout (this repo, defaults)
+        uses: ./checkout
+        with:
+          path: self
+      - run: test -f self/action.yml && test -f self/checkout/action.yml
+
+      - name: changed (explicit commits and paths)
+        id: explicit
+        uses: ./changed
+        with:
+          repository: baz-scm/gion
+          base: v0.3.1^1
+          head: v0.3.1
+      - name: changed (filtered)
+        id: filtered
+        uses: ./changed
+        with:
+          repository: baz-scm/gion
+          base: v0.3.1^1
+          head: v0.3.1
+          paths: internal/repo/history_test.go
+      - name: changed outputs
+        env:
+          FILES: ${{ steps.explicit.outputs.files }}
+        run: |
+          test "${{ steps.explicit.outputs.count }}" = 2
+          test "${{ steps.explicit.outputs.any }}" = true
+          grep -qx internal/repo/history.go <<<"$FILES"
+          test '${{ steps.filtered.outputs.json }}' = '["internal/repo/history_test.go"]'
+
+      - name: changed (this event's defaults)
+        id: event
+        uses: ./changed
+      - run: echo "${{ steps.event.outputs.base }}..${{ steps.event.outputs.head }}: ${{ steps.event.outputs.count }} files"

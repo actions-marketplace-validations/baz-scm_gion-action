@@ -1,0 +1,77 @@
+name: gion changed files
+description: List the files a pull request or push changed, without checking anything out.
+author: baz-scm
+branding:
+  icon: filter
+  color: blue
+
+inputs:
+  repository:
+    description: owner/repo or a git URL.
+    default: ${{ github.repository }}
+  base:
+    description: >
+      Commit to compare from. Defaults by event: pull_request compares
+      GitHub's test merge commit with its first parent (exactly the PR's
+      changes), push compares github.event.before, merge_group its base_sha.
+    default: ""
+  head:
+    description: Commit to compare to. Defaults to the commit under test.
+    default: ""
+  paths:
+    description: Only report changes under these paths, one per line.
+    default: ""
+  token:
+    description: Token for github.com, exported as GITHUB_TOKEN to later steps. Empty to export nothing.
+    default: ${{ github.token }}
+  version:
+    description: gion release to install, e.g. v0.3.1, or "latest".
+    default: latest
+
+outputs:
+  files:
+    description: Changed paths, one per line.
+    value: ${{ steps.diff.outputs.files }}
+  json:
+    description: Changed paths as a JSON array, for fromJSON() and matrices.
+    value: ${{ steps.diff.outputs.json }}
+  count:
+    description: Number of changed paths.
+    value: ${{ steps.diff.outputs.count }}
+  any:
+    description: '"true" if anything changed, else "false".'
+    value: ${{ steps.diff.outputs.any }}
+  base:
+    description: The commit compared from.
+    value: ${{ steps.diff.outputs.base }}
+  head:
+    description: The commit compared to.
+    value: ${{ steps.diff.outputs.head }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        GION_VERSION: ${{ inputs.version }}
+      run: '"$GITHUB_ACTION_PATH/../scripts/install.sh"'
+    - if: inputs.token != ''
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+      run: echo "GITHUB_TOKEN=$TOKEN" >>"$GITHUB_ENV"
+    - id: diff
+      shell: bash
+      env:
+        GION: ${{ steps.install.outputs.path }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+        REPOSITORY: ${{ inputs.repository }}
+        BASE: ${{ inputs.base }}
+        HEAD: ${{ inputs.head }}
+        PATHS: ${{ inputs.paths }}
+        EVENT: ${{ github.event_name }}
+        BEFORE: ${{ github.event.before }}
+        MQ_BASE: ${{ github.event.merge_group.base_sha }}
+        MQ_HEAD: ${{ github.event.merge_group.head_sha }}
+      run: '"$GITHUB_ACTION_PATH/../scripts/changed.sh"'

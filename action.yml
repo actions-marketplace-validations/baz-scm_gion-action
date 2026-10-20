@@ -1,0 +1,39 @@
+name: Set up gion
+description: Install the gion CLI to read, check out and push to git repos without cloning them.
+author: baz-scm
+branding:
+  icon: git-branch
+  color: blue
+
+inputs:
+  version:
+    description: gion release to install, e.g. v0.3.1, or "latest".
+    default: latest
+  token:
+    description: >
+      Token gion uses for github.com, exported as GITHUB_TOKEN to later steps.
+      The default token only reaches this repository; pass a PAT or app token
+      to read other private repos or push to them. Empty to export nothing.
+    default: ${{ github.token }}
+
+outputs:
+  version:
+    description: The gion version installed, e.g. v0.3.1.
+    value: ${{ steps.install.outputs.version }}
+  path:
+    description: Path to the gion binary.
+    value: ${{ steps.install.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        GION_VERSION: ${{ inputs.version }}
+      run: '"$GITHUB_ACTION_PATH/scripts/install.sh"'
+    - if: inputs.token != ''
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.token }}
+      run: echo "GITHUB_TOKEN=$TOKEN" >>"$GITHUB_ENV"
