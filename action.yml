@@ -1,4 +1,4 @@
-name: Set up gion
+name: gion CLI
 description: Install the gion CLI to read, check out and push to git repos without cloning them.
 author: baz-scm
 branding:
