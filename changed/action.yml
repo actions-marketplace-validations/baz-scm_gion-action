@@ -25,8 +25,11 @@ inputs:
     description: Token for github.com, exported as GITHUB_TOKEN to later steps. Empty to export nothing.
     default: ${{ github.token }}
   version:
-    description: gion release to install, e.g. v0.3.1, or "latest".
-    default: latest
+    description: >
+      gion release to install, e.g. v0.3.1, or "latest". Defaults to the
+      release this version of the action was tested with, which skips a
+      lookup; a new gion release bumps it automatically.
+    default: v0.3.1
 
 outputs:
   files:

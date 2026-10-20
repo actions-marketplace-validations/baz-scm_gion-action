@@ -30,7 +30,7 @@ You get those paths plus the files in their parent directories (root config, loc
 | `path` | `.` | directory to put the workspace in |
 | `git` | `true` | `false` skips the `.git` snapshot |
 | `token` | `github.token` | see [Tokens](#tokens) |
-| `version` | `latest` | gion release, e.g. `v0.3.1` |
+| `version` | pinned, see [Versioning](#versioning) | gion release, e.g. `v0.3.1`, or `latest` |
 
 Outputs: `path`, `gion-version`.
 
@@ -122,4 +122,6 @@ You don't need `actions/cache`. gion fetches only the objects a command needs, s
 
 ## Versioning
 
-`@v1` follows the latest `v1.x.y` of this action. The gion CLI version is separate: by default you get the latest gion release. Pin `version` for reproducible builds.
+Each release of this action defaults to one gion release, the one its tests ran against. Installing a known version skips the "which release is latest" lookup, so it's faster than `version: latest`.
+
+When gion publishes a release, [bump-gion](.github/workflows/bump-gion.yml) makes it the default, runs the tests, tags the next `v1.x.y` and moves `v1` to it. So `@v1` follows new gion releases within minutes. Use `@v1.x.y` or a commit to stay on one gion, or set `version` yourself.

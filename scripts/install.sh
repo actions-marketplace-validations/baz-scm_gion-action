@@ -2,7 +2,7 @@
 # Installs a gion release into the runner's tool cache and puts it on PATH.
 #
 # Environment:
-#   GION_VERSION  release to install, e.g. v0.3.1 (default: latest)
+#   GION_VERSION  release to install, e.g. v0.3.1, or "latest" (default)
 set -euo pipefail
 
 repo=baz-scm/gion
@@ -37,10 +37,14 @@ if [[ ! -x $dir/gion ]]; then
   trap 'rm -rf "$tmp"' EXIT
   archive="gion_${version#v}_${os}_${arch}.tar.gz"
   base="https://github.com/$repo/releases/download/$version"
-  curl -fsSL --retry 3 -o "$tmp/$archive" "$base/$archive" ||
-    fail "couldn't download $archive; is $version a gion release?"
-  curl -fsSL --retry 3 -o "$tmp/checksums.txt" "$base/checksums.txt" ||
-    fail "couldn't download checksums.txt for $version"
+  # Both downloads at once: each is a redirect plus a fetch, so doing them
+  # one after the other doubles the round trips.
+  curl -fsSL --retry 3 -o "$tmp/$archive" "$base/$archive" &
+  archive_pid=$!
+  curl -fsSL --retry 3 -o "$tmp/checksums.txt" "$base/checksums.txt" &
+  checksums_pid=$!
+  wait "$archive_pid" || fail "couldn't download $archive; is $version a gion release?"
+  wait "$checksums_pid" || fail "couldn't download checksums.txt for $version"
 
   want=$(awk -v f="$archive" '$2 == f { print $1 }' "$tmp/checksums.txt")
   [[ -n $want ]] || fail "$archive is not in checksums.txt"
