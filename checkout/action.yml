@@ -32,7 +32,7 @@ inputs:
     description: >
       gion release to install, e.g. v0.3.1, or "latest". Defaults to the
       release this version of the action was tested with, which skips a
-      lookup; a new gion release bumps it automatically.
+      lookup. It is bumped after each gion release.
     default: v0.3.1
 
 outputs:
